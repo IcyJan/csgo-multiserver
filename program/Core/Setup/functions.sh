@@ -11,6 +11,7 @@
 
 Core.Setup::registerCommands () {
 	simpleCommand "Core.Setup::beginSetup" setup
+	simpleCommand "Core.Setup::quietSetup" quiet-setup
 	simpleCommand "Core.Setup::printConfig" print-config
 }
 
@@ -320,4 +321,164 @@ Core.Setup::setupAsAdmin () {
 			multiple instances can run simultaneously.
 		EOF
 	}
+}
+
+
+############################### Quiet ADMIN INSTALLATION ##############################
+
+# TODO: make this function smaller
+Core.Setup::quietSetupAsAdmin () {
+
+	log <<-EOF
+
+		Basic Setup
+		===========
+
+		This assistant will install all remaining dependencies for your
+		$APP server and create a basic configuration.  Please follow the
+		instructions below.
+	EOF
+
+	######### Install App Downloader/Updater
+
+	App::installUpdater || return
+
+	######### Create base installation
+
+	INSTANCE=
+	INSTALL_DIR="$USER_DIR/$APP/base"
+	until Core.BaseInstallation::isExisting; do
+		bold <<-EOF
+
+			Now, please select the **base installation directory**.  This is the
+			directory the server will be downloaded to, make sure that there is
+			plenty of free space on the disk.  Be aware that this directory will
+			be made **public readable**, so other users on the system can create
+			server instances based on it.
+
+		EOF
+		#skip prompt
+		#read -r -p "Game Server Installation Directory (default: $USER_DIR/$APP/base) " INSTALL_DIR
+
+		INSTALL_DIR=${INSTALL_DIR:-"$USER_DIR/$APP/base"}
+		INSTALL_DIR="$(eval echo "$INSTALL_DIR")"   # expand tilde and stuff
+		INSTALL_DIR="$(readlink -m "$INSTALL_DIR")" # get absolute directory
+
+		Core.BaseInstallation::create
+	done
+
+	# Final Steps
+	App::finalizeInstance
+	Core.BaseInstallation::applyPermissions
+
+	# Create Config and make it readable
+	MSM_ADDONS="TokenHelper"
+	Core.Setup::writeConfig && {
+		log <<< ""
+		success <<-EOF
+			Basic Setup Complete!
+
+			Execute **$THIS_COMMAND install** to install or update the actual game files.
+			Of course, you can also copy the files from a different location.
+
+			Use **$THIS_COMMAND @name create** to create a new server instance out of
+			your base installation.  Each instance can be configured independently and
+			multiple instances can run simultaneously.
+		EOF
+	}
+}
+
+################################# QUIET SETUP #################################
+
+Core.Setup::quietSetup () {
+	out <<< ""
+
+	# Check, if config exists already
+	[[ -e "$CFG" ]] && {
+		info <<-EOF
+			The config file **$CFG** already exists!
+			If you want to start over, delete that file and run this command again.
+		EOF
+		return
+	}
+
+	out <<-EOF
+		-------------------------------------------------------------------------------
+		                CS:GO Multi-Mode Server Manager - Initial Setup
+		-------------------------------------------------------------------------------
+
+		It seems like this is the first time you use this script on this machine.
+		Before advancing, be aware of a few things:
+
+		>>  The configuration files will be saved in the directory:
+		        **$CFG_DIR**
+
+		    Make sure to backup any important data in that location.
+
+		>>  For multi-user setups, this script, located at
+		        **$THIS_SCRIPT**
+		    must be readable for all users.
+	EOF
+
+	#skip prompt
+	#promptY || return 
+
+	# Create config directory
+	mkdir -p "$CFG_DIR" && [[ -w "$CFG_DIR" ]] || {
+		fatal <<< "No permission to create or write the directory **$CFG_DIR**!"
+		return
+	}
+
+	# Ask the user if they wish to import a configuration
+	ADMIN=${ADMIN-$__ADMIN__}
+	if [[ ! $ADMIN ]]; then
+		log <<-EOF
+
+			Importing configurations
+			========================
+		EOF
+		fmt -w67 <<-EOF | indent
+
+			Instead of creating a new configuration, you may also import the settings
+			from a different user on this system.  This allows you to use that user's
+			game server installation as a base for your own instances, without having
+			to download the server files again.
+
+			If you wish to import the settings from another user, enter their name
+			below. Otherwise, hit enter to create your own configuration.
+		EOF
+	fi
+
+	local SUCCESS=
+	until [[ $SUCCESS ]]; do
+		if [[ ! $ADMIN ]]; then
+			echo
+			echo "Please enter the user to import the configuration from.  Leave empty"
+			echo "to skip importing configurations, press CTRL-C to exit."
+			echo
+			#skip prompt
+			#read -p "> Import configuration from? " -r ADMIN
+			ADMIN=""
+
+			if [[ $ADMIN ]]; then
+				debug <<< "Selected to import from user **$ADMIN**."
+			else
+				ADMIN=$USER
+				debug <<< "Skipping import and starting admin setup."
+			fi
+		fi
+
+		[[ $ADMIN == $USER ]] && { Core.Setup::quietSetupAsAdmin; return; }
+
+		if Core.Setup::importFrom $ADMIN; then
+			success <<< "The configuration of user **$ADMIN** has been imported successfully!"
+			local SUCCESS=1
+		else
+			warning <<< "Import failed! Please specify a different user."
+			ADMIN=
+		fi
+	done
+
+	# Succeeds, if we have a valid config at the end
+	Core.Setup::loadConfig
 }
