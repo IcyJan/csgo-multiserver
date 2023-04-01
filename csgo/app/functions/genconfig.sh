@@ -97,14 +97,15 @@ App::generateServerConfig () {
 		echo '}}}'
 	}
 
-	local WORKSHOP_SUBSCRIBED="$INSTANCE_DIR/csgo/subscribed_file_ids.txt"
-	local WORKSHOP_RESULT="$INSTANCE_DIR/csgo/.workshop_result.txt"
-	local MAPCYCLE_TXT="$INSTANCE_DIR/csgo/mapcycle.txt"
-	local GAMEMODES_TXT="$INSTANCE_DIR/csgo/gamemodes_server.txt"
-	local GAMEMODES_ORIG_TXT="$INSTANCE_DIR/csgo/gamemodes_server_orig.txt"
-	local AUTOEXEC_CFG="$INSTANCE_DIR/csgo/cfg/autoexec.cfg"
-	local SERVER_CFG="$INSTANCE_DIR/csgo/cfg/server.cfg"
-	local LAST_CFG="$INSTANCE_DIR/csgo/cfg/server_last.cfg"
+	#we want to manage our servers with these files
+	local WORKSHOP_SUBSCRIBED="$INSTANCE_DIR/csgo/subscribed_file_ids.txt.msm"
+	local WORKSHOP_RESULT="$INSTANCE_DIR/csgo/.workshop_result.txt.msm"
+	local MAPCYCLE_TXT="$INSTANCE_DIR/csgo/mapcycle.txt.msm"
+	local GAMEMODES_TXT="$INSTANCE_DIR/csgo/gamemodes_server.txt.msm"
+	local GAMEMODES_ORIG_TXT="$INSTANCE_DIR/csgo/gamemodes_server_orig.txt.msm"
+	local AUTOEXEC_CFG="$INSTANCE_DIR/csgo/cfg/autoexec.cfg.msm"
+	local SERVER_CFG="$INSTANCE_DIR/csgo/cfg/server.cfg.msm"
+	local LAST_CFG="$INSTANCE_DIR/csgo/cfg/server_last.cfg.msm"
 	local GTN
 	local GMN
 
